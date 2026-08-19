@@ -1,0 +1,131 @@
+// ============================================================================
+// Kundennachfrage-Konzept: Tagesgewichte + gewünschte Spätschicht-Anteile.
+// ============================================================================
+
+import { eachDayOfInterval, endOfMonth, format, getDay, startOfMonth } from "date-fns";
+
+export type WeekdayKey =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+/**
+ * Nachfrage-Gewichte je Wochentag.
+ *
+ * Angabe des Betriebs: "T6 và t7 umsatz cao ... Cần nhiều nhân viên", und auf
+ * die Rückfrage "gấp rưỡi hay gấp đôi thứ 2?" kam "Đôi ạ" – Freitag und
+ * Samstag machen also den DOPPELTEN Umsatz eines Montags.
+ *
+ * Montag ist damit der Anker mit 1,0 und Fr/Sa stehen auf 2,0. Die Tage
+ * dazwischen sind interpoliert, der Sonntag ist geschätzt: der Betrieb hat
+ * ihn nicht genannt, ein Sonntag liegt aber erfahrungsgemäß über einem
+ * Wochenanfang und unter dem Freitag. Wenn der Betrieb widerspricht, ist das
+ * hier die einzige Zeile, die sich ändern muss.
+ */
+export const DAY_WEIGHTS: Record<WeekdayKey, number> = {
+  monday: 1.0,
+  tuesday: 1.0,
+  wednesday: 1.1,
+  thursday: 1.3,
+  friday: 2.0,
+  saturday: 2.0,
+  sunday: 1.5,
+};
+
+/**
+ * Gewünschter Anteil an Spätschicht-Stunden je Wochentag.
+ * Glory Duck ist ein Restaurant mit Abendgeschäft (12:00–22:30). Das Gewicht liegt
+ * deshalb ÜBER der Hälfte – anders als bei einem Mittags-Imbiss – und am
+ * Wochenende deutlich höher: der Chef nennt ausdrücklich die ABENDE am
+ * Freitag, Samstag und Sonntag als Stoßzeit.
+ */
+export const LATE_SHIFT_RATIOS: Record<WeekdayKey, number> = {
+  monday: 0.55,
+  tuesday: 0.55,
+  wednesday: 0.55,
+  thursday: 0.55,
+  friday: 0.65,
+  saturday: 0.65,
+  sunday: 0.65,
+};
+
+/** date-fns getDay(): 0=So ... 6=Sa  ->  WeekdayKey. */
+const WEEKDAY_BY_GETDAY: Record<number, WeekdayKey> = {
+  0: "sunday",
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+};
+
+export const WEEKDAY_LABELS_DE: Record<WeekdayKey, string> = {
+  monday: "Montag",
+  tuesday: "Dienstag",
+  wednesday: "Mittwoch",
+  thursday: "Donnerstag",
+  friday: "Freitag",
+  saturday: "Samstag",
+  sunday: "Sonntag",
+};
+
+export const WEEKDAY_SHORT_DE: Record<WeekdayKey, string> = {
+  monday: "Mo",
+  tuesday: "Di",
+  wednesday: "Mi",
+  thursday: "Do",
+  friday: "Fr",
+  saturday: "Sa",
+  sunday: "So",
+};
+
+// Vietnamesische Wochentage – für die App-Oberfläche.
+export const WEEKDAY_LABELS_VI: Record<WeekdayKey, string> = {
+  monday: "Thứ Hai",
+  tuesday: "Thứ Ba",
+  wednesday: "Thứ Tư",
+  thursday: "Thứ Năm",
+  friday: "Thứ Sáu",
+  saturday: "Thứ Bảy",
+  sunday: "Chủ Nhật",
+};
+
+export const WEEKDAY_SHORT_VI: Record<WeekdayKey, string> = {
+  monday: "T2",
+  tuesday: "T3",
+  wednesday: "T4",
+  thursday: "T5",
+  friday: "T6",
+  saturday: "T7",
+  sunday: "CN",
+};
+
+export function weekdayKeyOf(date: Date): WeekdayKey {
+  return WEEKDAY_BY_GETDAY[getDay(date)];
+}
+
+/** Alle Kalendertage eines Monats als ISO-Strings "yyyy-MM-dd". month ist 1-basiert. */
+export function datesOfMonth(year: number, month: number): string[] {
+  const first = startOfMonth(new Date(year, month - 1, 1));
+  const last = endOfMonth(first);
+  return eachDayOfInterval({ start: first, end: last }).map((d) => format(d, "yyyy-MM-dd"));
+}
+
+export function dayWeightOf(isoDate: string): number {
+  return DAY_WEIGHTS[weekdayKeyOf(parseIsoDate(isoDate))];
+}
+
+export function lateRatioOf(isoDate: string): number {
+  return LATE_SHIFT_RATIOS[weekdayKeyOf(parseIsoDate(isoDate))];
+}
+
+/** ISO "yyyy-MM-dd" -> lokales Date (ohne Zeitzonen-Verschiebung). */
+export function parseIsoDate(isoDate: string): Date {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
