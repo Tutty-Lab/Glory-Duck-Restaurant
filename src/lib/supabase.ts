@@ -13,7 +13,7 @@ import { createClient } from "@supabase/supabase-js";
  * arbeiten kann. Ohne diese Möglichkeit zeigt jede lokale Entwicklungsumgebung
  * zwangsläufig auf die Produktivdaten der Filiale – und ein Klick beim Testen
  * ändert dann echte Dienstpläne. In Produktion ist die Variable nicht gesetzt,
- * dort gilt weiterhin "kylan".
+ * dort gilt "gloryduck".
  */
 export const STORE_ID = import.meta.env.VITE_STORE_ID || "gloryduck";
 
