@@ -66,6 +66,40 @@ describe.each(runs)("Seed-Monat: $seed.label", ({ seed, shifts, analysis }) => {
     }
   });
 
+  it("lässt den Laden nie offen und unbesetzt", () => {
+    // Geprüft wurde früher nur, ob jemand aufsperrt und jemand zusperrt. An
+    // einem Tag ohne Stoßzeit reichten dafür zwei 3-h-Dienste – einer um
+    // 12:00, einer um 19:30 – und dazwischen stand der Laden dreieinhalb
+    // Stunden offen und leer. Neun solche Tage waren es im Test, und keine
+    // einzige Prüfung hat es gemerkt.
+    //
+    // Gezählt wird je ÖFFNUNGSBLOCK, nicht über den ganzen Tag: eine
+    // Mittagsschließung ist keine Lücke.
+    const holidays = publicHolidays(seed.year);
+    const proDatum = new Map<string, typeof shifts>();
+    for (const s of shifts) {
+      const l = proDatum.get(s.date);
+      if (l) l.push(s);
+      else proDatum.set(s.date, [s]);
+    }
+
+    const luecken: string[] = [];
+    for (const [datum, amTag] of proDatum) {
+      const day = resolveDay(DEFAULT_WORK_HOURS, datum, holidays, {});
+      if (day.closed) continue;
+      for (const b of day.blocks) {
+        for (let t = b.startMinutes; t < b.endMinutes; t++) {
+          const da = amTag.filter((s) => s.startMinutes <= t && s.endMinutes > t).length;
+          if (da === 0) {
+            luecken.push(`${datum} ${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`);
+            break;
+          }
+        }
+      }
+    }
+    expect(luecken).toEqual([]);
+  });
+
   it("legt jede Schicht KOMPLETT in einen Öffnungsblock", () => {
     // Di–Fr hat der Tag ZWEI Blöcke (11:30–15:00 und 17:00–22:00). Es reicht
     // deshalb nicht, Anfang und Ende gegen den Tagesrahmen zu prüfen: eine

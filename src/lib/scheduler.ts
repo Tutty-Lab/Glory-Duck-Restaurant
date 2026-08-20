@@ -369,6 +369,10 @@ export function cheapestPeakCover(blocks: DayBlocks, peaks: readonly PeakWindow[
   const usable = ALL_HOURS.filter((h) => presenceFromPaid(h * 60) <= span);
 
   let found: number[] = [];
+  // Erst lückenlos suchen; findet sich nichts, noch einmal mit der alten,
+  // schwächeren Anforderung (nur auf- und zusperren).
+  for (const streng of [true, false]) {
+    if (found.length > 0) break;
   // Nach Anzahl der Dienste aufsteigend, innerhalb nach Gesamtstunden.
   for (let count = 1; count <= 4 && found.length === 0; count++) {
     let bestTotal = Number.POSITIVE_INFINITY;
@@ -378,7 +382,7 @@ export function cheapestPeakCover(blocks: DayBlocks, peaks: readonly PeakWindow[
     const recurse = (from: number) => {
       if (combo.length === count) {
         const total = combo.reduce((a, b) => a + b, 0);
-        if (total < bestTotal && canCoverDay(blocks, combo, peaks)) {
+        if (total < bestTotal && canCoverDay(blocks, combo, peaks, streng)) {
           bestTotal = total;
           best = [...combo];
         }
@@ -394,13 +398,62 @@ export function cheapestPeakCover(blocks: DayBlocks, peaks: readonly PeakWindow[
 
     if (best) found = (best as number[]).slice().sort((a, b) => b - a);
   }
+  }
 
   coverCache.set(key, found);
   return found;
 }
 
+/**
+ * Minuten, in denen der Laden GEÖFFNET ist, aber niemand da.
+ *
+ * Klingt selbstverständlich, war es aber nicht: geprüft wurde bisher nur, ob
+ * jemand aufsperrt und jemand zusperrt. An einem Tag ohne Stoßzeit reichten
+ * dafür zwei 3-h-Dienste – einer um 12:00, einer um 19:30 – und dazwischen
+ * stand der Laden dreieinhalb Stunden offen und leer.
+ */
+function uncoveredMinutes(shifts: Shift[], blocks: DayBlocks): number {
+  let offen = 0;
+  for (const b of blocks) {
+    const stuecke = shifts
+      .filter((s) => s.endMinutes > b.startMinutes && s.startMinutes < b.endMinutes)
+      .map((s) => [Math.max(s.startMinutes, b.startMinutes), Math.min(s.endMinutes, b.endMinutes)] as const)
+      .sort((x, y) => x[0] - y[0]);
+
+    let bisJetzt = b.startMinutes;
+    for (const [von, bis] of stuecke) {
+      if (von > bisJetzt) offen += von - bisJetzt;
+      if (bis > bisJetzt) bisJetzt = bis;
+      if (bisJetzt >= b.endMinutes) break;
+    }
+    if (bisJetzt < b.endMinutes) offen += b.endMinutes - bisJetzt;
+  }
+  return offen;
+}
+
+/**
+ * Gesamtnote eines Tages, je kleiner desto besser: erst die Stoßzeit, dann die
+ * Lücken. Eine fehlende Person in der Spitze wiegt mehr als jede Lücke, aber
+ * eine Lücke wiegt eben NICHT null – das war der Fehler.
+ */
+function dayDefect(shifts: Shift[], blocks: DayBlocks, peaks: readonly PeakWindow[]): number {
+  return peakDeficit(shifts, frameOf(blocks), peaks) * 10000 + uncoveredMinutes(shifts, blocks);
+}
+
 /** Lässt sich der Tag mit genau diesen Längen vollständig abdecken? */
-function canCoverDay(blocks: DayBlocks, hours: number[], peaks: readonly PeakWindow[]): boolean {
+function canCoverDay(
+  blocks: DayBlocks,
+  hours: number[],
+  peaks: readonly PeakWindow[],
+  /**
+   * false = Lücken hinnehmen. Nur der Notausgang: gibt es zu einer Fensterform
+   * überhaupt keine lückenlose Lösung (etwa weil ein Block 3,5 h lang ist, das
+   * Modell aber nur ganze Stunden kennt), käme sonst eine LEERE Abdeckung
+   * heraus – und eine leere Abdeckung schaltet die Besetzungslogik komplett ab.
+   * Lieber die alte, schwächere Anforderung als gar keine.
+   */
+  luckenlos = true,
+): boolean {
   const probe: Shift[] = hours.map((h, i) => ({
     id: `probe-${i}`,
     employeeId: `probe-${i}`,
@@ -418,7 +471,9 @@ function canCoverDay(blocks: DayBlocks, hours: number[], peaks: readonly PeakWin
   const frame = frameOf(blocks);
   const opens = probe.some((s) => s.startMinutes === frame.startMinutes);
   const closes = probe.some((s) => s.endMinutes === frame.endMinutes);
-  return opens && closes && peakDeficit(probe, frameOf(blocks), peaks) === 0;
+  if (!opens || !closes) return false;
+  if (!luckenlos) return peakDeficit(probe, frame, peaks) === 0;
+  return dayDefect(probe, blocks, peaks) === 0;
 }
 
 /** Bezahlte Stunden aller Dienste eines Tages. */
@@ -1639,7 +1694,7 @@ function candidateStarts(
  */
 function layoutDayForPeaks(blocks: DayBlocks, onDay: Shift[], peaks: readonly PeakWindow[]): void {
   if (onDay.length < 2) return;
-  if (peakDeficit(onDay, frameOf(blocks), peaks) === 0) return; // schon gut
+  if (dayDefect(onDay, blocks, peaks) === 0) return; // schon gut
   arrangeForPeaks(blocks, onDay, peaks);
 }
 
@@ -1651,7 +1706,6 @@ function layoutDayForPeaks(blocks: DayBlocks, onDay: Shift[], peaks: readonly Pe
 function arrangeForPeaks(blocks: DayBlocks, onDay: Shift[], peaks: readonly PeakWindow[]): void {
   if (onDay.length < 2) return;
 
-  const frame = frameOf(blocks);
   const first = blocks[0];
   const last = blocks[blocks.length - 1];
 
@@ -1664,7 +1718,7 @@ function arrangeForPeaks(blocks: DayBlocks, onDay: Shift[], peaks: readonly Peak
 
   let bestStarts = [...starts];
   // Eine Ausgangslage ohne Auf- oder Zusperrer zählt nicht als Lösung.
-  let bestDeficit = opensAndCloses() ? peakDeficit(onDay, frame, peaks) : Number.POSITIVE_INFINITY;
+  let bestDeficit = opensAndCloses() ? dayDefect(onDay, blocks, peaks) : Number.POSITIVE_INFINITY;
 
   for (let i = 0; i < onDay.length && bestDeficit > 0; i++) {
     // i === j ist ausdrücklich erlaubt: ein Dienst, der das ganze Fenster
@@ -1694,7 +1748,7 @@ function arrangeForPeaks(blocks: DayBlocks, onDay: Shift[], peaks: readonly Peak
         let pickDeficit = Number.POSITIVE_INFINITY;
         for (const c of candidateStarts(onDay[k], blocks, peaks)) {
           moveShiftTo(onDay[k], c);
-          const d = peakDeficit(onDay, frame, peaks);
+          const d = dayDefect(onDay, blocks, peaks);
           if (d < pickDeficit) {
             pickDeficit = d;
             pick = c;
@@ -1703,7 +1757,7 @@ function arrangeForPeaks(blocks: DayBlocks, onDay: Shift[], peaks: readonly Peak
         moveShiftTo(onDay[k], pick);
       }
 
-      const deficit = peakDeficit(onDay, frame, peaks);
+      const deficit = dayDefect(onDay, blocks, peaks);
       if (deficit < bestDeficit) {
         bestDeficit = deficit;
         bestStarts = onDay.map((s) => s.startMinutes);
