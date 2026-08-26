@@ -8,7 +8,8 @@ Mrson, DongDo).
 - **Arbeitszeit 12:00–22:30, durchgehend.** Auf die Rückfrage, ob der Laden
   mittags schließt, kam ein klares "Ko". Die genannte Pause ist die Pause der
   Mitarbeiter, keine Schließzeit des Ladens.
-- **Pause 30–60 Minuten.**
+- **Pause 30–60 Minuten**, nachgereicht präzisiert: **ca 8 h und 9 h = 60
+  Minuten**. Also über 6 h 30 Min, ab 8 h 60 Min.
 - **Vollzeit arbeitet 8 Stunden am Tag.** Genau eine Länge – 160 h im Monat
   sind exakt 20 Dienste.
 - **Freitag und Samstag machen den doppelten Umsatz eines Montags** und
@@ -90,10 +91,12 @@ werden direkt aus den Konstanten gerendert und können daher nicht veralten.
 
 - Max. **9 bezahlte Stunden** pro Tag, **ein Dienst** pro Mitarbeiter und Tag.
 - Höchstens **6 aufeinanderfolgende** Arbeitstage.
-- **Pause** (`calculatePause`): über 6 h = 30 Min, ab 9 h = 60 Min – die
-  Staffel des ArbZG mit genau den beiden Werten, die der Betrieb genannt hat.
+- **Pause** (`calculatePause`): über 6 h = 30 Min, **ab 8 h = 60 Min**. Das
+  liegt über dem ArbZG (§ 4 verlangt bei 8 h nur 30 Min); mehr Pause zu geben
+  ist erlaubt, weniger nicht. Der Betrieb hat 60 Minuten für die 8-h-Schicht
+  ausdrücklich genannt.
   Die Pause zählt **nicht** zum Soll, verlängert aber die Anwesenheit:
-  `presence = paid + pause`. Eine 8-h-Schicht belegt damit 8,5 h, eine
+  `presence = paid + pause`. Eine 8-h-Schicht belegt damit 9 h, eine
   9-h-Schicht 10 h – beides passt in das Fenster 12:00–22:30 (10,5 h).
 - Schichtlängen: **3 bis 9 Stunden**. Vollzeit bekommt **nur 8 h** (Ansage des
   Betriebs); geht ein Soll nicht in 8er auf, greift der Rückfall auf alle

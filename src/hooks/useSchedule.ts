@@ -96,25 +96,48 @@ export function useSchedule() {
 
   // Letzter Stand für Zugriffe außerhalb des Renders (siehe Erst-Upload).
   const latest = useRef<PersistedState>({ schedule, originalShifts, passwordHash });
+  const ersterLauf = useRef(true);
   useEffect(() => {
     latest.current = { schedule, originalShifts, passwordHash };
+    // Jede Änderung nach dem ersten Rendern kommt vom Nutzer – solange das
+    // Laden noch läuft, ist das der Stand, den er vor sich sieht.
+    if (ersterLauf.current) ersterLauf.current = false;
+    else if (!hydrated.current) beruehrt.current = true;
   }, [schedule, originalShifts, passwordHash]);
 
   // Beim Start den Stand der Filiale aus der gemeinsamen Datenbank holen.
   // Vorher darf nicht hochgeladen werden, sonst überschreibt der lokale
   // (evtl. leere) Stand die Daten in der Datenbank.
   const hydrated = useRef(!isRemoteConfigured);
+  /** Hat der Nutzer seit dem Start selbst etwas geändert? */
+  const beruehrt = useRef(false);
+  /** Stand in der Datenbank beim Start etwas drin? */
+  const fernHatteInhalt = useRef(false);
+
   useEffect(() => {
     if (!isRemoteConfigured) return;
     let cancelled = false;
-    (async () => {
+    let timer = 0;
+
+    const versuch = async (anlauf: number): Promise<void> => {
       try {
         const remote = await loadRemote();
         if (cancelled) return;
         if (remote?.schedule) {
-          setSchedule(normalizeSchedule(remote.schedule));
-          setOriginalShifts(remote.originalShifts ?? []);
-          setPasswordHash(remote.passwordHash);
+          fernHatteInhalt.current =
+            (remote.schedule.employees?.length ?? 0) > 0 ||
+            (remote.schedule.shifts?.length ?? 0) > 0;
+          // Hat der Nutzer inzwischen selbst getippt – etwa weil erst der
+          // dritte Anlauf durchkam –, bleibt SEIN Stand stehen. Ihm den
+          // Bildschirm unter den Händen zurückzusetzen wäre der sichtbarste
+          // Datenverlust von allen.
+          if (beruehrt.current) {
+            if (hatInhalt(latest.current)) await saveRemote(latest.current);
+          } else {
+            setSchedule(normalizeSchedule(remote.schedule));
+            setOriginalShifts(remote.originalShifts ?? []);
+            setPasswordHash(remote.passwordHash);
+          }
         } else if (hatInhalt(latest.current)) {
           // Noch keine Zeile für diese Filiale: lokalen Stand hochladen –
           // aber nur, wenn lokal überhaupt etwas drinsteht. Eine leere Zeile
@@ -122,25 +145,43 @@ export function useSchedule() {
           // versehentlich einen gespeicherten Leerstand.
           await saveRemote(latest.current);
         }
-        if (!cancelled) setRemoteStatus("idle");
+        if (cancelled) return;
+        setRemoteStatus("idle");
         // NUR nach erfolgreichem Lesen darf hochgeladen werden.
-        if (!cancelled) hydrated.current = true;
+        hydrated.current = true;
       } catch {
+        if (cancelled) return;
         // Lesen fehlgeschlagen: hydrated bleibt false, es wird NICHTS
         // hochgeladen. Sonst überschreibt der leere lokale Stand die Daten in
         // der Datenbank – genau so ist eine Filiale schon einmal leer geräumt
         // worden: Netzfehler beim Start, danach ein Klick, und weg war alles.
-        if (!cancelled) setRemoteStatus("error");
+        setRemoteStatus("error");
+        // Aber es wird weiter versucht. Ohne diesen Anlauf blieb hydrated die
+        // ganze Sitzung false: die App speicherte nur noch lokal und schickte
+        // nichts mehr an die Datenbank. Auf dem Handy des Chefs fehlte dann
+        // ein ganzer Abend Arbeit – lautlos, denn lokal sah alles richtig aus.
+        const wartezeit = Math.min(30_000, 2000 * 2 ** anlauf);
+        timer = window.setTimeout(() => void versuch(anlauf + 1), wartezeit);
       }
-    })();
+    };
+
+    void versuch(0);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, []);
 
   // Änderungen gebündelt hochladen (nicht bei jedem Tastendruck).
   useEffect(() => {
     if (!isRemoteConfigured || !hydrated.current) return;
+    // Ein leerer Stand darf einen vollen nicht im Hintergrund überschreiben.
+    // Das ist kein normaler Arbeitsschritt, sondern das Muster des Unfalls:
+    // etwas lief beim Laden schief, der Bildschirm ist leer, und eine Sekunde
+    // später steht dieser Leerstand in der Datenbank.
+    if (fernHatteInhalt.current && !hatInhalt({ schedule, originalShifts, passwordHash })) {
+      return;
+    }
     const timer = window.setTimeout(() => {
       setRemoteStatus("saving");
       saveRemote({ schedule, originalShifts, passwordHash })

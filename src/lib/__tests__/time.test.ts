@@ -32,7 +32,8 @@ describe("calculatePause", () => {
     expect(calculatePause(3 * 60)).toBe(0);
     expect(calculatePause(6 * 60)).toBe(0); // genau 6 h: noch keine Pause
     expect(calculatePause(6 * 60 + 1)).toBe(30); // ab MEHR als 6 h
-    expect(calculatePause(8 * 60)).toBe(30); // der normale Vollzeit-Tag
+    expect(calculatePause(8 * 60 - 1)).toBe(30); // knapp unter 8 h
+    expect(calculatePause(8 * 60)).toBe(60); // der normale Vollzeit-Tag: 60 min
     expect(calculatePause(9 * 60)).toBe(60);
   });
 });
@@ -50,7 +51,7 @@ describe("calculatePaidMinutes / presenceFromPaid", () => {
     expect(presenceFromPaid(180)).toBe(180); // 3 h, keine Pause
     expect(presenceFromPaid(240)).toBe(240); // 4 h, keine Pause
     expect(presenceFromPaid(300)).toBe(300); // 5 h
-    expect(presenceFromPaid(480)).toBe(510); // 8 h + 30 min = 8,5 h Anwesenheit
+    expect(presenceFromPaid(480)).toBe(540); // 8 h + 60 min = 9 h Anwesenheit
     expect(presenceFromPaid(540)).toBe(600); // 9 h + 60 min = 10 h
     expect(presenceFromPaid(360)).toBe(360); // 6 h – genau an der Grenze, noch ohne
     expect(presenceFromPaid(420)).toBe(450); // 7 h + 30 min

@@ -93,7 +93,7 @@ export function DocsTab() {
             Mỗi người phải đạt <b>đúng định mức tháng</b> (Sollstunden) — không thừa, không thiếu.
           </li>
           <li>
-            <b>Giờ nghỉ 30–60 phút</b> theo giờ công (bảng ở mục 3). Giờ nghỉ{" "}
+            <b>Giờ nghỉ 30–60 phút</b> theo giờ công (bảng ở mục 3), ca 8h trở lên là 60 phút. Giờ nghỉ{" "}
             <b>cộng thêm</b> vào thời gian có mặt, <b>không trừ</b> vào giờ công: ca 8 giờ
             công chiếm 8 tiếng rưỡi. Đây là giờ nghỉ của <b>nhân viên</b> — quán{" "}
             <b>không</b> đóng cửa nghỉ trưa.
@@ -207,9 +207,11 @@ export function DocsTab() {
         </p>
         <p>
           Giờ nghỉ <b>không trừ vào giờ công</b> mà kéo dài thời gian có mặt. Quán báo{" "}
-          <b>"Pause 30–60 phút"</b>, app áp theo đúng bậc của luật Đức: làm{" "}
-          <b>quá 6 tiếng</b> nghỉ 30 phút, <b>từ 9 tiếng</b> nghỉ 60 phút. Ca 8 giờ công
-          (ca chuẩn của toàn thời gian) chiếm 8 tiếng rưỡi. Bảng dưới đọc thẳng từ mã nguồn.
+          <b>"Pause 30–60 phút"</b>, sau đó nói rõ thêm <b>ca 8h và 9h nghỉ 60 phút</b>.
+          Nên bậc là: làm <b>quá 6 tiếng</b> nghỉ 30 phút, <b>từ 8 tiếng</b> nghỉ 60 phút.
+          Ca 8 giờ công (ca chuẩn của toàn thời gian) chiếm <b>9 tiếng</b> có mặt. Mức này
+          cao hơn luật Đức (§ 4 ArbZG chỉ bắt 30 phút ở 8 tiếng) — cho nghỉ nhiều hơn thì
+          được, ít hơn thì không. Bảng dưới đọc thẳng từ mã nguồn.
         </p>
         <div className="overflow-x-auto">
           <table className="text-sm border-collapse">
