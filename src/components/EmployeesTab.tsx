@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { UseScheduleReturn } from "../hooks/useSchedule";
-import type { EmploymentType } from "../types";
+import type { Employee, EmploymentType } from "../types";
+import { WEEKDAY_ORDER, WEEKDAY_SHORT_VI, type WeekdayKey } from "../lib/demand";
 import { splitTargetHours } from "../lib/splitTargetHours";
 
 const inputClass =
@@ -88,10 +89,8 @@ export function EmployeesTab({ store }: { store: UseScheduleReturn }) {
             const info = splitInfo(emp.targetMinutes / 60, emp.employmentType);
             const tooMany = emp.targetMinutes / 60 > WARN_HOURS;
             return (
-              <div
-                key={emp.id}
-                className="rounded-lg border border-slate-200 p-3 flex flex-col sm:flex-row sm:items-end gap-3"
-              >
+              <div key={emp.id} className="rounded-lg border border-slate-200 p-3 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <label className="flex flex-col sm:flex-1">
                   <span className="text-xs text-slate-500 mb-1 sm:hidden">Tên</span>
                   <input
@@ -153,11 +152,93 @@ export function EmployeesTab({ store }: { store: UseScheduleReturn }) {
                     Xoá
                   </button>
                 </div>
+                </div>
+
+                <Arbeitstage emp={emp} updateEmployee={updateEmployee} />
               </div>
             );
           })}
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * Die beiden Regeln, die der Betrieb selbst setzt: an WELCHEN Wochentagen
+ * jemand arbeitet, und WIE VIELE Tage der Woche davon genutzt werden.
+ *
+ * Zwei verschiedene Dinge, deshalb zwei Felder. "Kommt nur Freitag und
+ * Sonntag" ist das eine; "arbeitet fünf Tage die Woche" das andere – wer
+ * sieben mögliche Tage hat, aber nur fünf arbeitet, braucht die Zahl.
+ */
+function Arbeitstage({
+  emp,
+  updateEmployee,
+}: {
+  emp: Employee;
+  updateEmployee: (id: string, patch: Partial<Employee>) => void;
+}) {
+  const gewaehlt = emp.availableWeekdays ?? [];
+  const alleTage = gewaehlt.length === 0;
+
+  const toggleWeekday = (key: WeekdayKey) => {
+    // Kein Häkchen gesetzt heißt "alle Tage möglich". Wer aus diesem Zustand
+    // heraus einen Tag abwählt, meint "alle außer diesem" – deshalb wird die
+    // Liste dann mit allen anderen Tagen vorbelegt. Andernfalls nagelte ein
+    // Klick die Person auf einen einzigen Tag fest, also das Gegenteil.
+    const basis = alleTage ? [...WEEKDAY_ORDER] : gewaehlt;
+    const naechste = basis.includes(key) ? basis.filter((k) => k !== key) : [...basis, key];
+    updateEmployee(emp.id, {
+      availableWeekdays: naechste.length === WEEKDAY_ORDER.length ? undefined : naechste,
+    });
+  };
+
+  return (
+    <div className="border-t border-slate-100 pt-3">
+      <div className="text-xs text-slate-600 mb-1.5">
+        Ngày làm trong tuần
+        {alleTage && <span className="text-slate-400"> — bỏ trống = làm mọi ngày</span>}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {WEEKDAY_ORDER.map((key) => {
+          const an = alleTage || gewaehlt.includes(key);
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggleWeekday(key)}
+              className={`rounded px-2 py-1 text-xs border transition-colors ${
+                an
+                  ? "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-400 border-slate-200 line-through"
+              }`}
+            >
+              {WEEKDAY_SHORT_VI[key]}
+            </button>
+          );
+        })}
+      </div>
+
+      <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+        Số ngày làm mỗi tuần
+        <input
+          type="number"
+          min={1}
+          max={7}
+          placeholder="—"
+          value={emp.maxDaysPerWeek ?? ""}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            updateEmployee(emp.id, {
+              maxDaysPerWeek:
+                e.target.value === "" || n < 1 ? undefined : Math.min(7, Math.round(n)),
+            });
+          }}
+          className={`${inputClass} w-16`}
+        />
+        <span className="text-slate-400">bỏ trống = không giới hạn</span>
+      </label>
+    </div>
   );
 }

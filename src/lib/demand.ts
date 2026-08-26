@@ -13,6 +13,17 @@ export type WeekdayKey =
   | "saturday"
   | "sunday";
 
+/** Die Wochentage in der Reihenfolge, in der sie angezeigt werden. */
+export const WEEKDAY_ORDER: readonly WeekdayKey[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
 /**
  * Nachfrage-Gewichte je Wochentag.
  *

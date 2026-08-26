@@ -2,21 +2,12 @@ import {
   DAY_WEIGHTS,
   LATE_SHIFT_RATIOS,
   WEEKDAY_LABELS_VI,
+  WEEKDAY_ORDER,
   type WeekdayKey,
 } from "../lib/demand";
 import { SHIFT_LENGTHS } from "../lib/shifts";
 import { KEINE_OBERGRENZE, PEAK_WINDOWS_BY_WEEKDAY } from "../lib/scheduler";
 import { calculatePause, minutesToTime, presenceFromPaid } from "../lib/time";
-
-const WEEKDAY_ORDER: WeekdayKey[] = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -95,8 +86,20 @@ export function DocsTab() {
           <li>
             <b>Giờ nghỉ 30–60 phút</b> theo giờ công (bảng ở mục 3), ca 8h trở lên là 60 phút. Giờ nghỉ{" "}
             <b>cộng thêm</b> vào thời gian có mặt, <b>không trừ</b> vào giờ công: ca 8 giờ
-            công chiếm 8 tiếng rưỡi. Đây là giờ nghỉ của <b>nhân viên</b> — quán{" "}
+            công chiếm 9 tiếng. Đây là giờ nghỉ của <b>nhân viên</b> — quán{" "}
             <b>không</b> đóng cửa nghỉ trưa.
+          </li>
+          <li>
+            <b>Ngày làm trong tuần</b> và <b>số ngày làm mỗi tuần</b> đặt riêng cho từng
+            người ở tab <b>Nhân viên</b>.
+            <br />
+            <span className="text-slate-500">
+              Hai thứ khác nhau: hàng nút chọn <b>NHỮNG THỨ NÀO</b> được xếp ("chỉ đi T6
+              và CN", hoặc bỏ T2 nếu người đó nghỉ thứ hai); ô số nói <b>BAO NHIÊU</b>{" "}
+              ngày mỗi tuần được dùng ("làm 5 ngày/tuần"). Ai có đủ 7 ngày nhưng chỉ làm 5
+              thì cần con số đó. Bỏ trống cả hai = không hạn chế. Hai luật này áp ở mọi
+              bước xếp lịch, kể cả lúc app đổi và dời ca.
+            </span>
           </li>
           <li>
             Mỗi ca phải nằm <b>gọn trong một khung mở cửa</b>. Ở đây mỗi ngày chỉ có

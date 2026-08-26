@@ -3,6 +3,7 @@
 // niemals mit Fließkomma-Stunden.
 // ============================================================================
 
+import type { WeekdayKey } from "./lib/demand";
 import type { DateOverride, WorkHoursConfig } from "./lib/workHours";
 
 /**
@@ -36,6 +37,28 @@ export type Employee = {
   employmentType: EmploymentType;
   /** Monatliches Soll in Minuten (Integer). 176 h => 10560. */
   targetMinutes: number;
+  /**
+   * Wochentage, an denen diese Person überhaupt eingeplant werden darf.
+   *
+   * Fehlt das Feld oder ist es leer, gilt: jeder Tag ist möglich. Damit deckt
+   * EIN Feld beide Wünsche ab – "die Aushilfe kommt fest Freitag und Sonntag"
+   * (nur diese beiden ankreuzen) und "die Vollzeitkraft hat montags frei"
+   * (Montag abwählen).
+   *
+   * Eine leere Liste als "arbeitet nie" zu lesen wäre die gefährlichere
+   * Auslegung: wer noch kein Häkchen gesetzt hat, wäre plötzlich unplanbar.
+   */
+  availableWeekdays?: WeekdayKey[];
+  /**
+   * Höchstzahl der Arbeitstage je Woche.
+   *
+   * Etwas anderes als availableWeekdays: dort steht, WELCHE Tage in Frage
+   * kommen, hier, WIE VIELE davon genutzt werden dürfen. Wer sieben mögliche
+   * Tage hat, aber nur fünf arbeitet, braucht diese Zahl.
+   *
+   * Fehlt das Feld, begrenzt nur die Sechs-Tage-Regel des Gesetzes.
+   */
+  maxDaysPerWeek?: number;
 };
 
 export type Shift = {

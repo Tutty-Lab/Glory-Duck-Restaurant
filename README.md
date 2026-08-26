@@ -15,7 +15,18 @@ Mrson, DongDo).
 - **Freitag und Samstag machen den doppelten Umsatz eines Montags** und
   brauchen mehr Leute.
 - **Kein fester Ruhetag** genannt. Wer einen braucht, hakt ihn in *Cài đặt* je
-  Wochentag an.
+  Wochentag an. Im Code ist jeder der sieben Wochentage offen; ein Ruhetag, der
+  in der App auftaucht, kommt aus den gespeicherten Einstellungen dieser
+  Filiale, nicht aus dem Programm.
+- **Feste Arbeitstage je Person** (`availableWeekdays`) und eine **Höchstzahl
+  an Arbeitstagen je Woche** (`maxDaysPerWeek`), beides im Tab *Nhân viên*.
+  Zwei verschiedene Dinge: das eine sagt, WELCHE Wochentage in Frage kommen,
+  das andere, WIE VIELE davon genutzt werden. Leer heißt jeweils "keine
+  Einschränkung" – eine leere Liste als "arbeitet nie" zu lesen wäre die
+  gefährlichere Auslegung: wer noch kein Häkchen gesetzt hat, wäre sonst
+  plötzlich unplanbar. Beide Regeln gelten an **jeder** Stelle, die einen
+  Termin vergibt (`tagErlaubt`), nicht nur beim ersten Verteilen – beim
+  Verschieben und beim Tauschen genauso.
 - Belegschaft: **7 Personen**, Monats-Soll 160 / 160 / 90 / 40 / 40 / 40 / 35
   = **565 h**. Die Anstellungsart hat der Betrieb nicht gesagt; aus den
   Stundenzahlen abgeleitet sind 160 h Vollzeit, 90 h Teilzeit und alles um 40 h
