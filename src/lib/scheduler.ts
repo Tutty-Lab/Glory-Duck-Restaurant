@@ -107,10 +107,10 @@ function isWeekend(isoDate: string): boolean {
   return key === "friday" || key === "saturday";
 }
 
-const SHIFT_HOURS_DESC = [9, 8, 7, 6, 5, 4, 3] as const;
+const SHIFT_HOURS_DESC = [8, 7, 6, 5, 4, 3] as const;
 
 /** Längste zulässige Schicht in Stunden (bezahlt, ohne Pause). */
-const MAX_SHIFT_HOURS = 9;
+const MAX_SHIFT_HOURS = 8;
 
 /** Kürzeste zulässige Schicht in Minuten – darunter geht ein Soll nicht auf. */
 const MIN_SHIFT_MINUTES = 3 * 60;
@@ -135,10 +135,10 @@ const ALLOWED_HOURS: Record<Employee["employmentType"], readonly number[]> = {
   // sein, greift in chooseShiftHours der Rückfall auf ALL_HOURS – lieber eine
   // krumme Schicht als ein Monat, der nicht aufgeht.
   VOLLZEIT: [8],
-  TEILZEIT: [3, 4, 5, 6, 7, 8, 9],
+  TEILZEIT: [3, 4, 5, 6, 7, 8],
   // Minijob ist arbeitsrechtlich eine Form der Teilzeit – gleiche Längen.
   // Begrenzt wird er über das Monats-Soll, nicht über die Schichtlänge.
-  MINIJOB: [3, 4, 5, 6, 7, 8, 9],
+  MINIJOB: [3, 4, 5, 6, 7, 8],
 };
 
 /**
@@ -155,7 +155,7 @@ const SHORT_SHIFT_CHANCE = 0.1;
 const SHORT_SHIFT_HOURS: readonly number[] = [4, 5];
 
 /** Alle überhaupt zulässigen Längen – Rückfall, wenn das Fenster eng ist. */
-const ALL_HOURS: readonly number[] = [3, 4, 5, 6, 7, 8, 9];
+const ALL_HOURS: readonly number[] = [3, 4, 5, 6, 7, 8];
 
 // ── Stoßzeiten (peak windows) ───────────────────────────────────────────────
 // Angabe des Betriebs: "T6 và t7 umsatz cao ... Cần nhiều nhân viên" – Freitag
@@ -591,7 +591,7 @@ function peakLengthCapHours(
 
 /**
  * Wählt die Länge (Stunden) der nächsten Schicht eines Mitarbeiters so, dass
- * - sie 3..9 h ist und ins Tagesfenster passt (<= maxHours),
+ * - sie 3..8 h ist und ins Tagesfenster passt (<= maxHours),
  * - der verbleibende Rest exakt aufteilbar bleibt (0 oder >= 3 h),
  * - Vollzeit möglichst lange, Teilzeit eher kürzere Schichten bekommt.
  * Gibt 0 zurück, wenn an diesem Tag keine gültige Länge möglich ist.
@@ -1185,7 +1185,7 @@ function repairDemand(state: SchedulerState, employeesById: Map<string, Employee
  * Tauscht zwei Schichten zwischen zwei Tagen (verschiedene Mitarbeiter).
  *
  * Warum zusätzlich zum Umzug: ein Umzug verschiebt immer den GANZEN Block –
- * bei Schichten von 3..9 h springt das Tages-Soll dadurch grob. Ein Tausch
+ * bei Schichten von 3..8 h springt das Tages-Soll dadurch grob. Ein Tausch
  * verschiebt nur die Differenz der beiden Längen (z.B. 9 h gegen 7 h = 2 h)
  * und trifft die Tagesnachfrage deutlich feiner.
  *
