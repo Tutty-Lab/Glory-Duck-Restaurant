@@ -1,5 +1,5 @@
 // ============================================================================
-// Kundennachfrage-Konzept: Tagesgewichte je Wochentag.
+// Kundennachfrage-Konzept: Tagesgewichte + gewünschte Spätschicht-Anteile.
 // ============================================================================
 
 import { eachDayOfInterval, endOfMonth, format, getDay, startOfMonth } from "date-fns";
@@ -13,13 +13,29 @@ export type WeekdayKey =
   | "saturday"
   | "sunday";
 
+/** Die Wochentage in der Reihenfolge, in der sie angezeigt werden. */
+export const WEEKDAY_ORDER: readonly WeekdayKey[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
 /**
- * Nachfrage-Gewichte je Wochentag (keine Mitarbeiterzahlen!).
+ * Nachfrage-Gewichte je Wochentag.
  *
- * Angabe des Betriebs (Glory Duck): Freitag und Samstag machen den DOPPELTEN
- * Umsatz eines Montags („Đôi ạ"). Mo/Di 1,0 als Anker, Mi/Do interpoliert,
- * Sonntag geschätzt (über Wochenanfang, unter Freitag). Feiertage zählen wie
- * Sonntag.
+ * Angabe des Betriebs: "T6 và t7 umsatz cao ... Cần nhiều nhân viên", und auf
+ * die Rückfrage "gấp rưỡi hay gấp đôi thứ 2?" kam "Đôi ạ" – Freitag und
+ * Samstag machen also den DOPPELTEN Umsatz eines Montags.
+ *
+ * Montag ist damit der Anker mit 1,0 und Fr/Sa stehen auf 2,0. Die Tage
+ * dazwischen sind interpoliert, der Sonntag ist geschätzt: der Betrieb hat
+ * ihn nicht genannt, ein Sonntag liegt aber erfahrungsgemäß über einem
+ * Wochenanfang und unter dem Freitag. Wenn der Betrieb widerspricht, ist das
+ * hier die einzige Zeile, die sich ändern muss.
  */
 export const DAY_WEIGHTS: Record<WeekdayKey, number> = {
   monday: 1.0,
@@ -29,6 +45,23 @@ export const DAY_WEIGHTS: Record<WeekdayKey, number> = {
   friday: 2.0,
   saturday: 2.0,
   sunday: 1.5,
+};
+
+/**
+ * Gewünschter Anteil an Spätschicht-Stunden je Wochentag.
+ * Glory Duck ist ein Restaurant mit Abendgeschäft (12:00–22:30). Das Gewicht liegt
+ * deshalb ÜBER der Hälfte – anders als bei einem Mittags-Imbiss – und am
+ * Wochenende deutlich höher: der Chef nennt ausdrücklich die ABENDE am
+ * Freitag, Samstag und Sonntag als Stoßzeit.
+ */
+export const LATE_SHIFT_RATIOS: Record<WeekdayKey, number> = {
+  monday: 0.55,
+  tuesday: 0.55,
+  wednesday: 0.55,
+  thursday: 0.55,
+  friday: 0.65,
+  saturday: 0.65,
+  sunday: 0.65,
 };
 
 /** date-fns getDay(): 0=So ... 6=Sa  ->  WeekdayKey. */
@@ -92,6 +125,14 @@ export function datesOfMonth(year: number, month: number): string[] {
   const first = startOfMonth(new Date(year, month - 1, 1));
   const last = endOfMonth(first);
   return eachDayOfInterval({ start: first, end: last }).map((d) => format(d, "yyyy-MM-dd"));
+}
+
+export function dayWeightOf(isoDate: string): number {
+  return DAY_WEIGHTS[weekdayKeyOf(parseIsoDate(isoDate))];
+}
+
+export function lateRatioOf(isoDate: string): number {
+  return LATE_SHIFT_RATIOS[weekdayKeyOf(parseIsoDate(isoDate))];
 }
 
 /** ISO "yyyy-MM-dd" -> lokales Date (ohne Zeitzonen-Verschiebung). */
