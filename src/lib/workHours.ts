@@ -1,8 +1,8 @@
 // ============================================================================
 // Arbeitszeit-Fenster (giờ làm) je Wochentag + Feiertag. Das ist das Fenster,
 // in dem Schichten geplant werden dürfen (Früh am Fenster-Beginn, Spät am
-// Fenster-Ende). Feiertage (Sachsen) werden für Nachfrage & Spätquote wie Sonntag
-// behandelt, verwenden aber ihr eigenes Zeitfenster.
+// Fenster-Ende). Feiertage (Baden-Württemberg) werden für die Nachfrage wie
+// Sonntag behandelt und haben ihr eigenes Zeitfenster.
 // ============================================================================
 
 import { parseIsoDate, weekdayKeyOf, type WeekdayKey } from "./demand";
@@ -10,13 +10,10 @@ import { parseIsoDate, weekdayKeyOf, type WeekdayKey } from "./demand";
 export type DayWindow = { startMinutes: number; endMinutes: number };
 
 /**
- * Ein Arbeitstag kann aus MEHREREN Blöcken bestehen.
- *
- * Kylan öffnet Di–Fr zweimal am Tag (11:30–15:00 und 17:00–22:00). Früher gab
- * es je Wochentag nur ein Fenster; damit liess sich die Mittagsschliessung
- * nicht abbilden und der Scheduler plante mitten hinein. Ein Dienst muss immer
- * KOMPLETT in einen Block passen – über die Schliessung hinweg gibt es keine
- * Schicht.
+ * Ein Arbeitstag besteht bei Shin aus ZWEI Blöcken: mittags und abends.
+ * Dazwischen (15:00–17:00) ist der Laden zu – das ist keine bezahlte Pause,
+ * sondern geschlossene Zeit. Ein Dienst muss immer KOMPLETT in einen Block
+ * passen.
  */
 export type DayBlocks = DayWindow[];
 
@@ -25,8 +22,8 @@ export type WorkHoursConfig = {
   holiday: DayBlocks;
   /**
    * Wochentage, an denen der Laden grundsätzlich geschlossen ist (kein Dienst).
-   * Bei Kylan ist das der Montag. Ein Datum-Override mit eigenen Zeiten kann
-   * einen solchen Tag im Einzelfall trotzdem öffnen.
+   * Bei Shin ist das der Montag (Ruhetag). Ein Datum-Override mit eigenen
+   * Zeiten kann einen solchen Tag im Einzelfall trotzdem öffnen.
    */
   closedWeekdays: Record<WeekdayKey, boolean>;
 };
@@ -71,20 +68,8 @@ export function longestBlock(blocks: DayBlocks): number {
 
 const w = (start: number, end: number): DayWindow => ({ startMinutes: start, endMinutes: end });
 
-// Vorgaben der Chefin (Kylan Restaurant), Arbeitszeit:
-//   Montag            geschlossen
-//   Dienstag–Freitag  11:30–15:00 UND 17:00–22:00  (zwei Blöcke)
-//   Samstag, Sonntag  13:00–22:00
-//   Feiertag          15:00–22:00
-/**
- * Angabe des Betriebs: Arbeitszeit 12:00-22:30, DURCHGEHEND. Auf die
- * Rückfrage "hat der Laden mittags zu?" kam ein klares "Ko" – die genannte
- * Pause von 30-60 Minuten ist also die Pause der MITARBEITER, nicht eine
- * Schließzeit des Ladens. Deshalb hier nur ein Block je Tag.
- *
- * Das Datenmodell kann mehrere Blöcke je Tag (in Cài đặt lassen sich welche
- * hinzufügen); hier wird die Möglichkeit nur nicht gebraucht.
- */
+// Vorgabe des Betriebs (Glory Duck, Berlin): jeden Tag 12:00–22:30 durchgehend,
+// KEINE Mittagsschließung, kein fester Ruhetag; Feiertage wie sonst geöffnet.
 const TAG: DayBlocks = [w(12 * 60, 22 * 60 + 30)];
 
 export const DEFAULT_WORK_HOURS: WorkHoursConfig = {
@@ -97,10 +82,10 @@ export const DEFAULT_WORK_HOURS: WorkHoursConfig = {
     saturday: TAG.map((b) => ({ ...b })),
     sunday: TAG.map((b) => ({ ...b })),
   },
+  // Feiertage: offen wie sonst.
   holiday: TAG.map((b) => ({ ...b })),
-  // Kein fester Ruhetag genannt. Wer einen braucht, hakt ihn in Cài đặt an.
   closedWeekdays: {
-    monday: false,
+    monday: false, // kein fester Ruhetag – bei Bedarf in Cài đặt anhaken
     tuesday: false,
     wednesday: false,
     thursday: false,
@@ -144,7 +129,7 @@ const open = (blocks: DayBlocks): ResolvedDay => ({
 /**
  * Vollständige Auflösung eines Tages inkl. Ausnahmen:
  * Ausnahme geschlossen > Ausnahme eigene Zeiten > geschlossener Wochentag
- * (z.B. Montag) > Feiertag > Wochentag.
+ * (Montag) > Feiertag > Wochentag.
  */
 export function resolveDay(
   config: WorkHoursConfig,
